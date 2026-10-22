@@ -20,23 +20,31 @@ Upstream собирает пакеты только под Linux x86_64, поэ�
 
 ## Использование
 
+Нужны включённые flakes.
+
 Запуск без установки:
 
 ```sh
-nix run github:<REPO>
+nix run github:smykoff/lolka.nix
 ```
 
 Установка в профиль пользователя:
 
 ```sh
-nix profile install github:<REPO>
+nix profile install github:smykoff/lolka.nix
+```
+
+Чтобы обновить закреплённый `nixpkgs` в локальном клоне:
+
+```sh
+nix flake update
 ```
 
 ### NixOS (flakes)
 
 ```nix
 {
-  inputs.lolka.url = "github:<REPO>";
+  inputs.lolka.url = "github:smykoff/lolka.nix";
 
   outputs = { nixpkgs, lolka, ... }: {
     nixosConfigurations.host = nixpkgs.lib.nixosSystem {
@@ -73,9 +81,14 @@ environment.systemPackages = [ pkgs.lolka ];
   Если приложение всё равно не стартует, добавьте `--no-sandbox` в флаги обёртки
   в `package.nix`.
 - Нативные Node-аддоны для Windows и macOS остаются в архиве как есть.
-  `autoPatchelf` игнорирует те, что не может удовлетворить.
+  `autoPatchelfIgnoreMissingDeps = [ "*" ]` не даёт `autoPatchelfHook` упасть на
+  них; обратная сторона — реально отсутствующие Linux-библиотеки тоже не
+  репортятся, поэтому при ошибках загрузки модулей смотрите `nix log`.
 - `.desktop`-файл и иконки hicolor устанавливаются в `$out/share`, строка `Exec`
-  переписывается на обёрнутый бинарник `lolka`.
+  переписывается на обёрнутый бинарник `lolka`. Там же регистрируется MIME-тип
+  `x-scheme-handler/lolka`, чтобы ссылки `lolka://` (их использует колбэк входа
+  через браузер) открывали приложение; для этого нужна среда с поддержкой
+  MIME-обработчиков.
 - Приложение при старте проверяет обновления на `https://cdn.lolka.app/electron`
   и создаёт главное окно только после завершения проверки (успешной или с
   ошибкой). `resources/package-type` удалять нельзя: он выбирает deb-апдейтер.
