@@ -2,6 +2,6 @@
   "version": "1.0.124",
   "x86_64-linux": {
     "url": "https://cdn.lolka.app/electron/Lolka_1.0.124_amd64.deb",
-    "hash": "sha256-Ro+VCK4zuB0mM9LswdnAAt5WX//txuBZpfJBaAONSc0="
+    "hash": "sha512-dltQbJa8O3UblDfPpdNrx9BX0dMITzzYAFgtCdEm99WVHvKBO6r6W9HyNcfS8Nc86KwTORrvBiVk1AdcexDP3Q=="
   }
 }
