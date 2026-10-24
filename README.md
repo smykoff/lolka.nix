@@ -6,8 +6,8 @@ Nix flake that packages [Lolka](https://lolka.app), an Electron voice chat and
 screen sharing app.
 
 The package repackages the official prebuilt `.deb` from
-`https://storage.yandexcloud.net/lolka-electron/releases`. There are no public
-sources, so building from source in the Nix sandbox is not an option.
+`https://cdn.lolka.app/electron`. There are no public sources, so building from
+source in the Nix sandbox is not an option.
 
 ## Supported platforms
 
@@ -98,10 +98,13 @@ environment.systemPackages = [ pkgs.lolka ];
 Versions and hashes live in `sources.json`. Regenerate it with:
 
 ```sh
-bash scripts/update.sh
-```
+python3 -m venv scripts/.venv
+scripts/.venv/bin/pip install pyyaml
+scripts/.venv/bin/python scripts/update.py
 
-The script reads `latest-linux.yml` from the upstream release bucket, prefetches
-the new `.deb` and rewrites `sources.json`. A scheduled GitHub Actions workflow
-(`.github/workflows/update.yml`) runs it daily, builds the package and commits
-the result.
+# Force-updates the hashes even if the version did not change
+scripts/.venv/bin/python scripts/update.py --force
+
+# Uses nix store prefetch-file to generate the hash
+scripts/.venv/bin/python scripts/update.py --nix-hash
+```

@@ -6,8 +6,8 @@ Nix flake с пакетом [Lolka](https://lolka.app) — Electron-прилож
 голосового чата и демонстрации экрана.
 
 Пакет перепаковывает официальный готовый `.deb` из
-`https://storage.yandexcloud.net/lolka-electron/releases`. Публичных исходников
-нет, поэтому сборка из исходников в песочнице Nix невозможна.
+`https://cdn.lolka.app/electron`. Публичных исходников нет, поэтому сборка из
+исходников в песочнице Nix невозможна.
 
 ## Поддерживаемые платформы
 
@@ -100,10 +100,13 @@ environment.systemPackages = [ pkgs.lolka ];
 Версии и хеши хранятся в `sources.json`. Перегенерировать его можно так:
 
 ```sh
-bash scripts/update.sh
-```
+python3 -m venv scripts/.venv
+scripts/.venv/bin/pip install pyyaml
+scripts/.venv/bin/python scripts/update.py
 
-Скрипт читает `latest-linux.yml` из бакета с релизами, предфетчит новый `.deb`
-и перезаписывает `sources.json`. Workflow GitHub Actions
-(`.github/workflows/update.yml`) запускает его раз в сутки, собирает пакет и
-коммитит результат.
+# Принудительно обновляет хеши, даже если версия не изменилась
+scripts/.venv/bin/python scripts/update.py --force
+
+# Использует nix store prefetch-file для генерации хеша
+scripts/.venv/bin/python scripts/update.py --nix-hash
+```
