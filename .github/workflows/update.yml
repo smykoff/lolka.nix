@@ -2,6 +2,15 @@ name: update
 on:
   schedule: [{ cron: "0 6 * * *" }]
   workflow_dispatch:
+    inputs:
+      force:
+        description: Rewrite sources.json even if the version is already up to date
+        type: boolean
+        default: true
+      nix-hash:
+        description: Compute the hash with nix instead of using the sha512 from the metadata
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -14,8 +23,23 @@ jobs:
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: experimental-features = nix-command flakes
+      - name: install python deps
+        run: |
+          python3 -m venv scripts/.venv
+          scripts/.venv/bin/pip install -q pyyaml
       - id: upd
-        run: bash scripts/update.sh
+        env:
+          INPUT_FORCE: ${{ inputs.force }}
+          INPUT_NIX_HASH: ${{ inputs.nix-hash }}
+        run: |
+          args=()
+          if [ "$INPUT_FORCE" = "true" ]; then
+            args+=(--force)
+          fi
+          if [ "$INPUT_NIX_HASH" = "true" ]; then
+            args+=(--nix-hash)
+          fi
+          scripts/.venv/bin/python scripts/update.py "${args[@]}"
       - name: build
         if: steps.upd.outputs.version != ''
         run: nix build -L
