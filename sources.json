@@ -1,7 +1,7 @@
 {
-  "version": "1.0.100",
+  "version": "1.0.124",
   "x86_64-linux": {
-    "url": "https://storage.yandexcloud.net/lolka-electron/releases/Lolka_1.0.100_amd64.deb",
-    "hash": "sha256-FcJdPEUxTYWds3U3ZNGw5tkdJSjEEO8HD1Akg738myw="
+    "url": "https://storage.yandexcloud.net/lolka-electron/releases/Lolka_1.0.124_amd64.deb",
+    "hash": "sha256-Ro+VCK4zuB0mM9LswdnAAt5WX//txuBZpfJBaAONSc0="
   }
 }
