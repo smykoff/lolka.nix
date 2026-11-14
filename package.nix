@@ -6,13 +6,14 @@
 , dpkg
 , wrapGAppsHook3
   # Runtime libraries (Linux).
-, alsa-lib, at-spi2-atk, at-spi2-core, cairo, cups, dbus, expat
-, fontconfig, freetype, gdk-pixbuf, glib, gsettings-desktop-schemas, gtk3, libappindicator-gtk3
-, libdrm, libgbm, libGL, libnotify, libpulseaudio, libsecret
-, libxkbcommon, nspr, nss, pango, pipewire, systemd
-, libx11, libxcb, libxcomposite, libxdamage, libxext, libxfixes
-, libxrandr, libxrender, libxtst, libXScrnSaver, libuuid, xz
-, libdbusmenu
+, at-spi2-atk, brotli, bzip2, cairo, dbus, fontconfig, freetype
+, gdk-pixbuf, glib, gsettings-desktop-schemas, gtk3, harfbuzz
+, libdrm, libgbm, libGL, libkrb5, libpulseaudio
+, libx11, libxcb, libxcb-cursor, libxcb-image, libxcb-keysyms
+, libxcb-render-util, libxcb-util, libxcb-wm
+, libxcomposite, libxdamage, libxext, libxfixes, libxi
+, libxkbcommon, libxrandr, libxtst
+, openssl, pango, wayland, zlib, zstd
   # Small tools the launcher expects to find on PATH. `glib` from the runtime
   # deps provides `gio`, which xdg-open uses under GNOME.
 , coreutils, gnugrep, gnused, which, xdg-utils
@@ -26,13 +27,14 @@ let
     or (throw "lolka: unsupported system ${system}");
 
   runtimeLibs = [
-    alsa-lib at-spi2-atk at-spi2-core cairo cups dbus expat
-    fontconfig freetype gdk-pixbuf glib gtk3 libappindicator-gtk3
-    libdrm libgbm libGL libnotify libpulseaudio libsecret
-    libxkbcommon nspr nss pango pipewire systemd
-    libx11 libxcb libxcomposite libxdamage libxext libxfixes
-    libxrandr libxrender libxtst libXScrnSaver libuuid xz
-    libdbusmenu
+    at-spi2-atk brotli bzip2 cairo dbus fontconfig freetype
+    gdk-pixbuf glib gtk3 harfbuzz
+    libdrm libgbm libGL libkrb5 libpulseaudio
+    libx11 libxcb libxcb-cursor libxcb-image libxcb-keysyms
+    libxcb-render-util libxcb-util libxcb-wm
+    libxcomposite libxdamage libxext libxfixes libxi
+    libxkbcommon libxrandr libxtst
+    openssl pango wayland zlib zstd
   ];
 in
 stdenv.mkDerivation {
@@ -45,12 +47,15 @@ stdenv.mkDerivation {
 
   buildInputs = runtimeLibs ++ [ gsettings-desktop-schemas stdenv.cc.cc.lib ];
 
-  # The bundle ships native Node addons built for Windows and macOS.
-  autoPatchelfIgnoreMissingDeps = [ "*" ];
-
-  # ANGLE dlopens the system EGL by soname (libEGL.so.1) instead of linking it,
-  # so autoPatchelf cannot discover it. Advertise libglvnd in every RUNPATH.
-  appendRunpaths = [ "${lib.getLib libGL}/lib" ];
+  # Qt and the multimedia stack are bundled. Keep $ORIGIN entries so the app
+  # and its plugins can reach the bundled libraries; libglvnd is dlopened by
+  # ANGLE and OpenSSL is dlopened by the Qt TLS backend and the FFmpeg stubs,
+  # so autoPatchelf cannot discover either one on its own.
+  appendRunpaths = [
+    "$ORIGIN" "$ORIGIN/../lib" "$ORIGIN/../../lib"
+    "${lib.getLib libGL}/lib"
+    "${lib.getLib openssl}/lib"
+  ];
 
   dontBuild = true;
 
@@ -65,20 +70,15 @@ stdenv.mkDerivation {
     runHook preInstall
 
     mkdir -p $out/opt $out/bin $out/share
-    cp -a src/opt/Lolka $out/opt/Lolka
+    cp -a src/opt/lolka-x $out/opt/lolka-x
 
     cp -a src/usr/share/applications $out/share/
     cp -a src/usr/share/icons $out/share/
 
-    # The in-store copy is not setuid root, so Chromium refuses to use it.
-    # Removing it makes Electron fall back to the user-namespace sandbox.
-    rm -f $out/opt/Lolka/chrome-sandbox
+    # `package-type` tells the app which update channel it was installed from.
+    # Keep the bundled copy at $out/opt/lolka-x/package-type.
 
-    # Keep resources/package-type: it selects the deb updater at startup.
-    # Without it the app picks AppImageUpdater, which no-ops when APPIMAGE is
-    # unset, and the splash screen never hands over to the main window.
-
-    makeWrapper $out/opt/Lolka/lolka $out/bin/lolka \
+    makeWrapper $out/opt/lolka-x/bin/lolka-x $out/bin/lolka \
       --prefix PATH : ${lib.makeBinPath [ coreutils gnugrep gnused which xdg-utils glib ]}
 
     # No LD_LIBRARY_PATH here on purpose. autoPatchelfHook already set RPATH on
@@ -86,14 +86,14 @@ stdenv.mkDerivation {
     # such as xdg-open -> gio -> browser, which would pick up our glibc instead
     # of their own.
 
-    substituteInPlace $out/share/applications/lolka.desktop \
-      --replace-fail "Exec=/opt/Lolka/lolka" "Exec=lolka"
+    substituteInPlace $out/share/applications/app.lolka.desktop.qt.desktop \
+      --replace-fail "Exec=lolka-x" "Exec=lolka"
 
     runHook postInstall
   '';
 
   meta = {
-    description = "Voice chat and screen sharing application";
+    description = "Chat and voice with friends";
     homepage = "https://lolka.app";
     platforms = [ "x86_64-linux" ];
     license = lib.licenses.mit;
