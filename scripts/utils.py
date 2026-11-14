@@ -7,29 +7,27 @@ import sys
 import urllib.request
 from pathlib import Path
 
-import yaml
-
-BASE_URL = "https://cdn.lolka.app/electron"
-METADATA_URL = f"{BASE_URL}/latest-linux.yml"
+METADATA_URL = "https://updates.lolka.app/desktop/linux/latest"
 SOURCES = Path(__file__).resolve().parent.parent / "sources.json"
 
 
 def fetch_metadata():
-    """Return the latest version, Linux x86_64 artifact and its SRI hash."""
+    """Return the latest version, Linux x86_64 deb URL and its SRI hash."""
     with urllib.request.urlopen(METADATA_URL, timeout=60) as response:
-        meta = yaml.safe_load(response.read())
+        meta = json.loads(response.read())
 
     try:
         version = meta["version"]
-        artifact = meta["path"]
-        # The top-level sha512 is the hash of `path`, base64-encoded, which is
+        artifact = next(f for f in meta["files"] if f["name"].endswith(".deb"))
+        url = artifact["url"]
+        # The sha512 is the base64-encoded hash of the artifact, which is
         # exactly the payload of an SRI hash.
-        hash_ = f"sha512-{meta['sha512']}"
-    except (TypeError, KeyError):
+        hash_ = f"sha512-{artifact['sha512']}"
+    except (TypeError, KeyError, StopIteration):
         sys.exit(f"unexpected metadata from {METADATA_URL}")
-    if not artifact.endswith(".deb"):
-        sys.exit(f"unexpected artifact in metadata: {artifact}")
-    return version, artifact, hash_
+    if not url.startswith("https://"):
+        sys.exit(f"unexpected artifact URL in metadata: {url}")
+    return version, url, hash_
 
 
 def prefetch(url):

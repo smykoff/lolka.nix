@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Update sources.json from the upstream electron-updater metadata."""
+"""Update sources.json from the upstream release metadata."""
 
 import argparse
 
 from utils import (
-    BASE_URL,
     fetch_metadata,
     prefetch,
     read_sources,
@@ -31,14 +30,13 @@ def parse_args():
 
 def main():
     args = parse_args()
-    version, artifact, metadata_hash = fetch_metadata()
+    version, url, metadata_hash = fetch_metadata()
     old_text, old_version = read_sources()
 
     if version == old_version and not args.force:
         print(f"up to date: {version}")
         return
 
-    url = f"{BASE_URL}/{artifact}"
     hash_ = prefetch(url) if args.nix_hash else metadata_hash
     new_text = render_sources(version, url, hash_)
     changed = new_text != old_text

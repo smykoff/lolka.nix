@@ -23,10 +23,6 @@ jobs:
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: experimental-features = nix-command flakes
-      - name: install python deps
-        run: |
-          python3 -m venv scripts/.venv
-          scripts/.venv/bin/pip install -q pyyaml
       - id: upd
         env:
           INPUT_FORCE: ${{ inputs.force }}
@@ -39,7 +35,7 @@ jobs:
           if [ "$INPUT_NIX_HASH" = "true" ]; then
             args+=(--nix-hash)
           fi
-          scripts/.venv/bin/python scripts/update.py "${args[@]}"
+          python3 scripts/update.py "${args[@]}"
       - name: build
         if: steps.upd.outputs.version != ''
         run: nix build -L
