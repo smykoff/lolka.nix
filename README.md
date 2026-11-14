@@ -2,12 +2,11 @@ English | [Русский](README.ru.md)
 
 # lolka.nix
 
-Nix flake that packages [Lolka](https://lolka.app), an Electron voice chat and
-screen sharing app.
+Nix flake that packages [Lolka](https://lolka.app), a chat and voice app.
 
-The package repackages the official prebuilt `.deb` from
-`https://cdn.lolka.app/electron`. There are no public sources, so building from
-source in the Nix sandbox is not an option.
+The package repackages the official prebuilt `.deb` announced by the upstream
+release feed at `https://updates.lolka.app/desktop/linux/latest`. There are no
+public sources, so building from source in the Nix sandbox is not an option.
 
 ## Supported platforms
 
@@ -75,36 +74,28 @@ environment.systemPackages = [ pkgs.lolka ];
 - External links (including the browser login flow) are opened through
   `xdg-open`; `glib` is in the wrapper `PATH` so that `xdg-open` can use
   `gio open` under GNOME/Wayland.
-- `chrome-sandbox` is removed from the bundle: a copy in the Nix store cannot be
-  setuid root, so Chromium falls back to the user-namespace sandbox. If the app
-  still fails to start, add `--no-sandbox` to the wrapper flags in `package.nix`.
-- Native Node addons for Windows and macOS are shipped in the archive as is.
-  `autoPatchelfIgnoreMissingDeps = [ "*" ]` keeps `autoPatchelfHook` from failing
-  on them; the tradeoff is that genuinely missing Linux libraries are not
-  reported either, so check `nix log` if the app cannot load a module.
+- The bundle ships its own Qt 6, FFmpeg, ICU and ONNX Runtime libraries. Only
+  the system libraries they link against are taken from nixpkgs via
+  `autoPatchelfHook`; `$ORIGIN` runpaths are kept so the app and its plugins can
+  still find the bundled ones.
 - The `.desktop` file and hicolor icons are installed under `$out/share`, and the
-  `Exec` line is rewritten to the wrapped `lolka` binary. The file also registers
-  the `x-scheme-handler/lolka` MIME type, so `lolka://` links (used by the
-  browser login callback) open the app; this needs a desktop environment with
-  MIME handler support.
-- The app runs an update check against `https://cdn.lolka.app/electron` at startup
-  and only creates the main window once the check finishes (successfully or with
-  an error). `resources/package-type` must stay in place: it selects the deb
-  updater. If it is removed, the app falls back to `AppImageUpdater`, which does
-  nothing without `APPIMAGE` set, and the splash screen hangs forever.
+  `Exec` line is rewritten to the wrapped `lolka` binary (upstream uses
+  `lolka-x`). The file also registers the `x-scheme-handler/lolka` MIME type, so
+  `lolka://` links (used by the browser login callback) open the app; this needs
+  a desktop environment with MIME handler support.
+- `$out/opt/lolka-x/package-type` is left in place: it tells the app which
+  update channel it was installed from.
 
 ## Updating
 
 Versions and hashes live in `sources.json`. Regenerate it with:
 
 ```sh
-python3 -m venv scripts/.venv
-scripts/.venv/bin/pip install pyyaml
-scripts/.venv/bin/python scripts/update.py
+python3 scripts/update.py
 
 # Force-updates the hashes even if the version did not change
-scripts/.venv/bin/python scripts/update.py --force
+python3 scripts/update.py --force
 
 # Uses nix store prefetch-file to generate the hash
-scripts/.venv/bin/python scripts/update.py --nix-hash
+python3 scripts/update.py --nix-hash
 ```
