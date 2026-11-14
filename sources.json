@@ -1,7 +1,7 @@
 {
-  "version": "2.0.0",
+  "version": "2.0.6",
   "x86_64-linux": {
-    "url": "https://cdn.lolka.app/desktop/linux/2.0.0/lolka-x_2.0.0_amd64.deb",
-    "hash": "sha512-UY6c5vM0JXVWRgpzY0q4PaEuTl6KGRpKde/CWYbsMlGJzhk+OzqILoEfoVfRhc/Vl1gSsOVuqo9A28mGB958FQ=="
+    "url": "https://cdn.lolka.app/desktop/linux/2.0.6/lolka-x_2.0.6_amd64.deb",
+    "hash": "sha512-dO7L/6vrA6oEcXvXBM11RG2M3s8C/eiDNvUY1jJ12a4P04N8ffUcdlq/W/rrd0k4zW8nk5KYghlC9qwS61gc/A=="
   }
 }
