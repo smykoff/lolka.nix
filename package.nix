@@ -8,12 +8,12 @@
   # Runtime libraries (Linux).
 , at-spi2-atk, brotli, bzip2, cairo, dbus, fontconfig, freetype
 , gdk-pixbuf, glib, gsettings-desktop-schemas, gtk3, harfbuzz
-, libdrm, libgbm, libGL, libkrb5, libpulseaudio
+, libdrm, libgbm, libGL, libkrb5, libpulseaudio, libva
 , libx11, libxcb, libxcb-cursor, libxcb-image, libxcb-keysyms
 , libxcb-render-util, libxcb-util, libxcb-wm
 , libxcomposite, libxdamage, libxext, libxfixes, libxi
 , libxkbcommon, libxrandr, libxtst
-, openssl, pango, wayland, zlib, zstd
+, openssl, pango, pipewire, wayland, zlib, zstd
   # Small tools the launcher expects to find on PATH. `glib` from the runtime
   # deps provides `gio`, which xdg-open uses under GNOME.
 , coreutils, gnugrep, gnused, which, xdg-utils
@@ -29,12 +29,12 @@ let
   runtimeLibs = [
     at-spi2-atk brotli bzip2 cairo dbus fontconfig freetype
     gdk-pixbuf glib gtk3 harfbuzz
-    libdrm libgbm libGL libkrb5 libpulseaudio
+    libdrm libgbm libGL libkrb5 libpulseaudio libva
     libx11 libxcb libxcb-cursor libxcb-image libxcb-keysyms
     libxcb-render-util libxcb-util libxcb-wm
     libxcomposite libxdamage libxext libxfixes libxi
     libxkbcommon libxrandr libxtst
-    openssl pango wayland zlib zstd
+    openssl pango pipewire wayland zlib zstd
   ];
 in
 stdenv.mkDerivation {
@@ -49,12 +49,13 @@ stdenv.mkDerivation {
 
   # Qt and the multimedia stack are bundled. Keep $ORIGIN entries so the app
   # and its plugins can reach the bundled libraries; libglvnd is dlopened by
-  # ANGLE and OpenSSL is dlopened by the Qt TLS backend and the FFmpeg stubs,
-  # so autoPatchelf cannot discover either one on its own.
+  # ANGLE, OpenSSL by the Qt TLS backend and the FFmpeg stubs, and PipeWire by
+  # Qt Multimedia, so autoPatchelf cannot discover any of them on its own.
   appendRunpaths = [
     "$ORIGIN" "$ORIGIN/../lib" "$ORIGIN/../../lib"
     "${lib.getLib libGL}/lib"
     "${lib.getLib openssl}/lib"
+    "${lib.getLib pipewire}/lib"
   ];
 
   dontBuild = true;
@@ -86,8 +87,15 @@ stdenv.mkDerivation {
     # such as xdg-open -> gio -> browser, which would pick up our glibc instead
     # of their own.
 
-    substituteInPlace $out/share/applications/app.lolka.desktop.qt.desktop \
-      --replace-fail "Exec=lolka-x" "Exec=lolka"
+    # Upstream switched the desktop entry from a bare `Exec=lolka-x` to an
+    # absolute `Exec=/opt/lolka-x/bin/lolka-x`, so match the command whatever
+    # prefix it has and point it at the wrapper installed above.
+    desktopFile=$out/share/applications/app.lolka.desktop.qt.desktop
+    sed -i -E 's|^Exec=.*lolka-x|Exec=lolka|' "$desktopFile"
+    grep -q '^Exec=lolka' "$desktopFile" || {
+      echo "lolka: failed to patch Exec line in $desktopFile" >&2
+      exit 1
+    }
 
     runHook postInstall
   '';
